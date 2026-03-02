@@ -188,3 +188,11 @@ pub struct Monster {
 pub struct Potion {
     pub name: Box<str>
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct Word {
+    #[serde(rename = "zhCN")]
+    pub zh_cn: Option<Box<str>>,
+    #[serde(rename = "zhTW")]
+    pub zh_tw: Option<Box<str>>
+}

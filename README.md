@@ -1,7 +1,7 @@
 ## 使用
 
 ```sh
-genshin-inputmethod-dictionary -d <GenshinData根目录> generate
+genshin-inputmethod-dictionary generate -g <GenshinData根目录> -d <GenshinDictionary文件>
 ```
 
 ## 构建

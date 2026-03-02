@@ -3,14 +3,14 @@ mod model;
 use std::io::BufReader;
 use std::collections::HashSet;
 use std::sync::Arc;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::fs::File;
 use regex::Regex;
 use clap::{Parser, Subcommand, ValueEnum};
 use model::*;
 
 #[derive(Clone, Copy, ValueEnum)]
-enum Language {
+pub enum Language {
     /// Simplified Chiense
     ZhHans,
     /// Traditional Chinese
@@ -18,7 +18,7 @@ enum Language {
 }
 
 impl Language {
-    fn to_dir(&self) -> &'static str {
+    pub fn to_dir(&self) -> &'static str {
         match self {
             Self::ZhHans => "chinese-simplified",
             Self::ZhHant => "chinese-traditional"
@@ -27,9 +27,19 @@ impl Language {
 }
 
 #[derive(Subcommand)]
-enum Commands {
+pub enum Commands {
     /// Generate dictionary
-    Generate
+    Generate {
+        /// Path to [Genshin Data](https://github.com/dvaJi/genshin-data) directory
+        #[arg(short = 'g', long)]
+        genshin_data: PathBuf,
+        /// Path to [Genshin Dictionary](https://dataset.genshin-dictionary.com/words.json) dataset file
+        #[arg(short = 'd', long)]
+        genshin_dictionary: PathBuf,
+        /// Path to output directory
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+    }
 }
 
 #[derive(Parser)]
@@ -41,22 +51,16 @@ enum Commands {
     propagate_version = true
 )]
 pub struct Args {
-    /// Path to https://github.com/dvaJi/genshin-data directory
-    #[arg(short, long)]
-    data: PathBuf,
-    /// Path to output directory
-    #[arg(short, long)]
-    pub output: Option<PathBuf>,
     /// Language variant
     #[arg(short, long, value_enum, default_value_t = Language::ZhHans)]
-    language: Language,
+    pub language: Language,
     #[command(subcommand)]
-    command: Commands
+    pub command: Commands
 }
 
-pub async fn process_domain_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_domain_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
+    let root = root.to_path_buf();
 
     let data = tokio::task::spawn_blocking(move || -> anyhow::Result<Domains> {
         let file = File::open(root.join("domains.json"))?;
@@ -84,9 +88,9 @@ pub async fn process_domain_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box
     Ok(set)
 }
 
-pub async fn process_food_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_food_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
+    let root = root.to_path_buf();
 
     for e in root.join("food").read_dir()? {
         let path = e?.path();
@@ -107,9 +111,9 @@ pub async fn process_food_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<s
     Ok(set)
 }
 
-pub async fn process_common_material_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_common_material_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
+    let root = root.to_path_buf();
 
     for e in root.join("common_materials").read_dir()? {
         let path = e?.path();
@@ -127,9 +131,9 @@ pub async fn process_common_material_names(args: Arc<Args>) -> anyhow::Result<Ha
     Ok(set)
 }
 
-pub async fn process_local_material_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_local_material_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
+    let root = root.to_path_buf();
 
     for e in root.join("local_materials").read_dir()? {
         let path = e?.path();
@@ -147,9 +151,9 @@ pub async fn process_local_material_names(args: Arc<Args>) -> anyhow::Result<Has
     Ok(set)
 }
 
-pub async fn process_elemental_stone_material_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_elemental_stone_material_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
+    let root = root.to_path_buf();
 
     for e in root.join("elemental_stone_materials").read_dir()? {
         let path = e?.path();
@@ -167,9 +171,9 @@ pub async fn process_elemental_stone_material_names(args: Arc<Args>) -> anyhow::
     Ok(set)
 }
 
-pub async fn process_jewel_material_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_jewel_material_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
+    let root = root.to_path_buf();
 
     for e in root.join("jewels_materials").read_dir()? {
         let path = e?.path();
@@ -187,9 +191,9 @@ pub async fn process_jewel_material_names(args: Arc<Args>) -> anyhow::Result<Has
     Ok(set)
 }
 
-pub async fn process_talent_upgrade_material_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_talent_upgrade_material_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
+    let root = root.to_path_buf();
 
     for e in root.join("talent_lvl_up_materials").read_dir()? {
         let path = e?.path();
@@ -207,9 +211,8 @@ pub async fn process_talent_upgrade_material_names(args: Arc<Args>) -> anyhow::R
     Ok(set)
 }
 
-pub async fn process_weapon_enhancement_material_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_weapon_enhancement_material_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
 
     for e in root.join("weapon_enhancement_material").read_dir()? {
         let path = e?.path();
@@ -227,9 +230,8 @@ pub async fn process_weapon_enhancement_material_names(args: Arc<Args>) -> anyho
     Ok(set)
 }
 
-pub async fn process_character_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_character_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
 
     for e in root.join("characters").read_dir()? {
         let path = e?.path();
@@ -263,9 +265,8 @@ pub async fn process_character_names(args: Arc<Args>) -> anyhow::Result<HashSet<
     Ok(set)
 }
 
-pub async fn process_weapon_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_weapon_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
 
     for e in root.join("weapons").read_dir()? {
         let path = e?.path();
@@ -283,9 +284,8 @@ pub async fn process_weapon_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box
     Ok(set)
 }
 
-pub async fn process_achievement_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_achievement_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
 
     for e in root.join("achievements").read_dir()? {
         let path = e?.path();
@@ -306,9 +306,8 @@ pub async fn process_achievement_names(args: Arc<Args>) -> anyhow::Result<HashSe
     Ok(set)
 }
 
-pub async fn process_artifact_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_artifact_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
 
     for e in root.join("artifacts").read_dir()? {
         let path = e?.path();
@@ -339,9 +338,8 @@ pub async fn process_artifact_names(args: Arc<Args>) -> anyhow::Result<HashSet<B
     Ok(set)
 }
 
-pub async fn process_fish_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_fish_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
 
     for e in root.join("fish").read_dir()? {
         let path = e?.path();
@@ -359,9 +357,8 @@ pub async fn process_fish_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<s
     Ok(set)
 }
 
-pub async fn process_bait_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_bait_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
 
     for e in root.join("bait").read_dir()? {
         let path = e?.path();
@@ -379,9 +376,8 @@ pub async fn process_bait_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<s
     Ok(set)
 }
 
-pub async fn process_fishing_rod_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_fishing_rod_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
 
     for e in root.join("fishing_rod").read_dir()? {
         let path = e?.path();
@@ -399,9 +395,8 @@ pub async fn process_fishing_rod_names(args: Arc<Args>) -> anyhow::Result<HashSe
     Ok(set)
 }
 
-pub async fn process_furnishing_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_furnishing_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
 
     for e in root.join("furnishing").read_dir()? {
         let path = e?.path();
@@ -419,9 +414,8 @@ pub async fn process_furnishing_names(args: Arc<Args>) -> anyhow::Result<HashSet
     Ok(set)
 }
 
-pub async fn process_geography_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_geography_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
 
     for e in root.join("geography").read_dir()? {
         let path = e?.path();
@@ -442,9 +436,8 @@ pub async fn process_geography_names(args: Arc<Args>) -> anyhow::Result<HashSet<
     Ok(set)
 }
 
-pub async fn process_monster_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_monster_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
 
     for e in root.join("monsters").read_dir()? {
         let path = e?.path();
@@ -467,9 +460,8 @@ pub async fn process_monster_names(args: Arc<Args>) -> anyhow::Result<HashSet<Bo
     Ok(set)
 }
 
-pub async fn process_potion_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_potion_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
 
     for e in root.join("potions").read_dir()? {
         let path = e?.path();
@@ -487,9 +479,8 @@ pub async fn process_potion_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box
     Ok(set)
 }
 
-pub async fn process_weapon_primary_material_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_weapon_primary_material_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
 
     for e in root.join("weapon_primary_materials").read_dir()? {
         let path = e?.path();
@@ -507,9 +498,8 @@ pub async fn process_weapon_primary_material_names(args: Arc<Args>) -> anyhow::R
     Ok(set)
 }
 
-pub async fn process_weapon_secondary_material_names(args: Arc<Args>) -> anyhow::Result<HashSet<Box<str>>> {
+pub async fn process_weapon_secondary_material_names(root: Arc<Path>) -> anyhow::Result<HashSet<Box<str>>> {
     let mut set = HashSet::new();
-    let root = args.data.join("src").join("data").join(args.language.to_dir());
 
     for e in root.join("weapon_secondary_materials").read_dir()? {
         let path = e?.path();
@@ -523,6 +513,28 @@ pub async fn process_weapon_secondary_material_names(args: Arc<Args>) -> anyhow:
 
         set.insert(data.name);
     }
+
+    Ok(set)
+}
+
+pub async fn process_dictionary(file: Arc<Path>, language: Language) -> anyhow::Result<HashSet<Box<str>>> {
+    let mut set = HashSet::new();
+
+    tokio::task::spawn_blocking(move || -> anyhow::Result<Vec<Word>> {
+        let file = File::open(file)?;
+        let reader = BufReader::new(file);
+        let data = serde_json::from_reader(reader)?;
+        
+        Ok(data)
+    })
+        .await??
+        .into_iter()
+        .for_each(|w| {
+            match language {
+                Language::ZhHans => if let Some(s) = w.zh_cn { set.insert(s); },
+                Language::ZhHant => if let Some(s) = w.zh_tw { set.insert(s); }
+            };
+        });
 
     Ok(set)
 }
